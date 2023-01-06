@@ -18,10 +18,10 @@ import cbor2
 import msgpack
 import nacl.pwhash
 
-from aries_askar_upgrade.db_connection import DbConnection
-from aries_askar_upgrade.sqlite_connection import SqliteConnection
-from aries_askar_upgrade.pg_connection import PgConnection
-from aries_askar_upgrade.error import UpgradeError
+from .db_connection import DbConnection
+from .sqlite_connection import SqliteConnection
+from .pg_connection import PgConnection
+from .error import UpgradeError
 
 
 CHACHAPOLY_KEY_LEN = 32
@@ -439,24 +439,24 @@ def _credential_tags(cred_data: dict) -> dict:
     return tags
 
 
-async def upgrade(db: DbConnection, master_pw: str):
-    await db.connect()
+async def upgrade(conn: DbConnection, master_pw: str):
+    await conn.connect()
 
     try:
-        await db.pre_upgrade()
-        indy_key = await fetch_indy_key(db, master_pw)
+        await conn.pre_upgrade()
+        indy_key = await fetch_indy_key(conn, master_pw)
         profile_key = await init_profile(conn, indy_key)
         await update_items(conn, indy_key, profile_key)
         await conn.finish_upgrade()
         print("Finished schema upgrade")
     finally:
-        await db.close()
+        await conn.close()
 
-    await post_upgrade(f"sqlite://{db._path}", master_pw)
+    await post_upgrade(f"sqlite://{conn._path}", master_pw)
     print("done")
 
 
-if __name__ == "__main__":
+def main():
     logging.basicConfig(level=logging.WARN)
 
     db_host = "localhost"
@@ -466,3 +466,7 @@ if __name__ == "__main__":
 
     conn = PgConnection(db_host, db_name, db_user, db_pass)
     asyncio.get_event_loop().run_until_complete(upgrade(conn, "insecure"))
+
+
+if __name__ == "__main__":
+    main()
