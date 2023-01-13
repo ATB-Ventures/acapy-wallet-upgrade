@@ -7,6 +7,7 @@ import docker
 
 from acapy_wallet_upgrade.__main__ import upgrade
 from acapy_wallet_upgrade.pg_connection import PgConnection
+from acapy_wallet_upgrade.pg_connection_mwst import PgConnectionMWST
 from acapy_wallet_upgrade.sqlite_connection import SqliteConnection
 
 
@@ -53,31 +54,29 @@ async def test_migration_dbpw(tmp_path):
         pass
     else:
         container.stop()
-    try:
-        container = client.containers.run(
-            "postgres:11",
-            name="indy-demo-postgres",
-            volumes={dst: {"bind": "/var/lib/postgresql/data", "mode": "rw"}},
-            ports={"5432/tcp": 5432},
-            environment=["POSTGRES_PASSWORD=mysecretpassword"],
-            auto_remove=True,
-            detach=True,
-        )
-        time.sleep(4)
 
-        conn = PgConnection(
-            db_host = "localhost",
-            db_name = "alice",
-            db_user = "postgres",
-            db_pass = "mysecretpassword",
-            path = "postgres://postgres:mysecretpassword@localhost:5432/alice"
-        )
-        key = "insecure"
-        await upgrade(conn, key)
-        container.stop()
-    except:
-            pass  # shh, Conceal it. Don't feel it. Don't let it show.
-        
+    container = client.containers.run(
+        "postgres:11",
+        name="indy-demo-postgres",
+        volumes={dst: {"bind": "/var/lib/postgresql/data", "mode": "rw"}},
+        ports={"5432/tcp": 5432},
+        environment=["POSTGRES_PASSWORD=mysecretpassword"],
+        auto_remove=True,
+        detach=True,
+    )
+    time.sleep(4)
+
+    conn = PgConnection(
+        db_host = "localhost",
+        db_name = "alice",
+        db_user = "postgres",
+        db_pass = "mysecretpassword",
+        path = "postgres://postgres:mysecretpassword@localhost:5432/alice"
+    )
+    key = "insecure"
+    await upgrade(conn, key)
+    container.stop()
+
 
 @pytest.mark.asyncio
 async def test_migration_mwst(tmp_path):
@@ -98,28 +97,24 @@ async def test_migration_mwst(tmp_path):
         pass
     else:
         container.stop()
-    try:
-        container = client.containers.run(
-            "postgres:11",
-            name="indy-demo-postgres",
-            volumes={dst: {"bind": "/var/lib/postgresql/data", "mode": "rw"}},
-            ports={"5432/tcp": 5432},
-            environment=["POSTGRES_PASSWORD=mysecretpassword"],
-            auto_remove=True,
-            detach=True,
-        )
-        time.sleep(4)
-        conn = PgConnection(
+
+    container = client.containers.run(
+        "postgres:11",
+        name="indy-demo-postgres",
+        volumes={dst: {"bind": "/var/lib/postgresql/data", "mode": "rw"}},
+        ports={"5432/tcp": 5432},
+        environment=["POSTGRES_PASSWORD=mysecretpassword"],
+        auto_remove=True,
+        detach=True,
+    )
+    time.sleep(4)
+    conn = PgConnectionMWST(
         db_host = "localhost",
         db_name = "wallets",
         db_user = "postgres",
         db_pass= "mysecretpassword",
         path = "postgres://postgres:mysecretpassword@localhosts:5432/wallets"
-        )
-        key = "insecure"
-        await upgrade(conn, key)
-        container.stop()
-    except:
-        pass  # TODO: handle errors
-
-
+    )
+    key = "insecure"
+    await upgrade(conn, key)
+    container.stop()
